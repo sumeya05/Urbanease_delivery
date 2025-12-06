@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import "./app.css";
+import "./App.css";
 
 const API_BASE = "http://localhost:8000/api";
 
 export default function App() {
+  // --- States ---
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -13,6 +14,21 @@ export default function App() {
   const [discountCode, setDiscountCode] = useState("");
   const [discountApplied, setDiscountApplied] = useState(false);
 
+  // --- Customer info ---
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+
+  // --- Admin / Tracker ---
+  const [orderSearch, setOrderSearch] = useState("");
+  const [statusUpdateOrderId, setStatusUpdateOrderId] = useState("");
+  const [statusUpdateValue, setStatusUpdateValue] = useState("");
+  const [driverName, setDriverName] = useState("");
+
+  // --- Sorting / Product selection ---
+  const [sortOption, setSortOption] = useState("");
+
+  // --- Fetch categories ---
   useEffect(() => {
     fetch(`${API_BASE}/categories`)
       .then((res) => res.json())
@@ -20,6 +36,7 @@ export default function App() {
       .catch(console.error);
   }, []);
 
+  // --- Fetch products ---
   useEffect(() => {
     let url = selectedCategory
       ? `${API_BASE}/products?category=${selectedCategory}`
@@ -27,10 +44,17 @@ export default function App() {
     if (searchTerm) url += `&search=${searchTerm}`;
     fetch(url)
       .then((res) => res.json())
-      .then(setProducts)
+      .then((data) => {
+        if (sortOption === "price-asc") data.sort((a, b) => a.price - b.price);
+        if (sortOption === "price-desc") data.sort((a, b) => b.price - a.price);
+        if (sortOption === "name")
+          data.sort((a, b) => a.name.localeCompare(b.name));
+        setProducts(data);
+      })
       .catch(console.error);
-  }, [selectedCategory, searchTerm]);
+  }, [selectedCategory, searchTerm, sortOption]);
 
+  // --- Fetch orders (polling every 5s) ---
   const fetchOrders = () => {
     fetch(`${API_BASE}/orders`)
       .then((res) => res.json())
@@ -68,10 +92,15 @@ export default function App() {
     );
   };
 
-  // --- Orders ---
+  // --- Place order ---
   const placeOrder = () => {
+    if (!customerName || !customerPhone || !customerAddress)
+      return alert("Please fill customer details!");
     if (cart.length === 0) return alert("Cart is empty!");
     const orderData = {
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      customer_address: customerAddress,
       items: cart.map((p) => ({ product_id: p.id, quantity: p.quantity })),
     };
     fetch(`${API_BASE}/orders`, {
@@ -95,7 +124,7 @@ export default function App() {
       .catch(console.error);
   };
 
-  // --- Discounts ---
+  // --- Discount ---
   const applyDiscount = () => {
     if (discountCode === "SAVE10") {
       setDiscountApplied(true);
@@ -106,6 +135,22 @@ export default function App() {
     }
   };
 
+  // --- Admin update ---
+  const updateStatus = () => {
+    if (!statusUpdateOrderId || !statusUpdateValue)
+      return alert("Provide Order ID and new status");
+    fetch(
+      `${API_BASE}/delivery/${statusUpdateOrderId}/status?status=${statusUpdateValue}&driver_name=${driverName}`,
+      { method: "PUT" }
+    )
+      .then(() => {
+        alert("Status updated!");
+        fetchOrders();
+      })
+      .catch(console.error);
+  };
+
+  // --- Derived totals ---
   const cartTotal = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
@@ -114,85 +159,101 @@ export default function App() {
     ? (cartTotal * 0.9).toFixed(2)
     : cartTotal.toFixed(2);
 
+  const filteredOrders = orderSearch
+    ? orders.filter(
+        (o) =>
+          o.id.toString() === orderSearch ||
+          o.customer_name.toLowerCase().includes(orderSearch.toLowerCase())
+      )
+    : orders;
+
   return (
     <div className="app-container">
-      <h1>📦 UrbanEase Delivery</h1>
+      <h1>🚀 UrbanEase Delivery</h1>
 
-      {/* Search */}
-      <input
-        type="text"
-        placeholder="Search products..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="search-input"
-      />
-
-      {/* Categories */}
-      <div className="categories">
-        {categories.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => setSelectedCategory(c.id)}
-            className={
-              selectedCategory === c.id ? "category-btn active" : "category-btn"
-            }
-          >
-            {c.name}
-          </button>
-        ))}
-        <button
-          onClick={() => setSelectedCategory(null)}
-          className="category-btn all-btn"
-        >
-          All
-        </button>
-      </div>
-
-      {/* Price Filter */}
-      <div className="price-filters">
-        <button
-          onClick={() => setProducts(products.filter((p) => p.price < 5))}
-        >
-          Under $5
-        </button>
-        <button
-          onClick={() =>
-            setProducts(products.filter((p) => p.price >= 5 && p.price <= 20))
-          }
-        >
-          $5–$20
-        </button>
-        <button
-          onClick={() => setProducts(products.filter((p) => p.price > 20))}
-        >
-          Above $20
-        </button>
-      </div>
-
-      {/* Products */}
-      <div className="products-grid">
-        {products.map((p) => (
-          <div key={p.id} className="product-card">
-            <h3>{p.name}</h3>
-            <p>Price: ${p.price}</p>
-            <button onClick={() => addToCart(p)} className="add-cart-btn">
-              Add to Cart
+      <div className="main-layout">
+        {/* --- Sidebar --- */}
+        <div className="sidebar">
+          <h3>Categories</h3>
+          {categories.map((c) => (
+            <button
+              key={c.id}
+              className={selectedCategory === c.id ? "active" : ""}
+              onClick={() => setSelectedCategory(c.id)}
+            >
+              {c.name}
             </button>
-          </div>
-        ))}
-      </div>
+          ))}
+          <button onClick={() => setSelectedCategory(null)}>All</button>
 
-      {/* Cart */}
-      <div className="cart-section">
-        <h2>🛒 Cart ({cart.length})</h2>
-        {cart.length === 0 ? (
-          <p>No items in cart.</p>
-        ) : (
-          <>
+          <h3>Products</h3>
+          <select onChange={(e) => addToCart(JSON.parse(e.target.value))}>
+            <option value="">Select product</option>
+            {products.map((p) => (
+              <option key={p.id} value={JSON.stringify(p)}>
+                {p.name} (${p.price})
+              </option>
+            ))}
+          </select>
+
+          <h3>Customer Info</h3>
+          <input
+            placeholder="Name"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+          />
+          <input
+            placeholder="Phone"
+            value={customerPhone}
+            onChange={(e) => setCustomerPhone(e.target.value)}
+          />
+          <input
+            placeholder="Address"
+            value={customerAddress}
+            onChange={(e) => setCustomerAddress(e.target.value)}
+          />
+
+          <h3>Discount</h3>
+          <input
+            placeholder="Discount code"
+            value={discountCode}
+            onChange={(e) => setDiscountCode(e.target.value)}
+          />
+          <button onClick={applyDiscount}>Apply Discount</button>
+
+          <h3>Actions</h3>
+          <button onClick={placeOrder}>Place Order</button>
+          <button onClick={clearCart}>Clear Cart</button>
+
+          <h3>Admin / Driver</h3>
+          <input
+            placeholder="Order ID"
+            value={statusUpdateOrderId}
+            onChange={(e) => setStatusUpdateOrderId(e.target.value)}
+          />
+          <input
+            placeholder="Status"
+            value={statusUpdateValue}
+            onChange={(e) => setStatusUpdateValue(e.target.value)}
+          />
+          <input
+            placeholder="Driver Name"
+            value={driverName}
+            onChange={(e) => setDriverName(e.target.value)}
+          />
+          <button onClick={updateStatus}>Update Status</button>
+        </div>
+
+        {/* --- Main Panel --- */}
+        <div className="main-panel">
+          <h2>🛒 Cart</h2>
+          {cart.length === 0 ? (
+            <p>Cart is empty</p>
+          ) : (
             <ul>
               {cart.map((item) => (
                 <li key={item.id}>
-                  {item.name} - ${item.price} x {item.quantity}
+                  {item.name} x {item.quantity} (${item.price})
                   <button onClick={() => changeQuantity(item.id, 1)}>+</button>
                   <button onClick={() => changeQuantity(item.id, -1)}>-</button>
                   <button onClick={() => removeFromCart(item.id)}>
@@ -201,47 +262,46 @@ export default function App() {
                 </li>
               ))}
             </ul>
-            <p>Total: ${discountedTotal}</p>
-            <input
-              type="text"
-              placeholder="Discount code"
-              value={discountCode}
-              onChange={(e) => setDiscountCode(e.target.value)}
-            />
-            <button onClick={applyDiscount}>Apply Discount</button>
-            <button onClick={clearCart}>Clear Cart</button>
-            <button onClick={placeOrder}>Place Order</button>
-          </>
-        )}
-      </div>
+          )}
+          <p>Total: ${discountedTotal}</p>
 
-      {/* Orders */}
-      <div className="orders-section">
-        <h2>📦 Orders ({orders.length})</h2>
-        {orders.length === 0 ? (
-          <p>No orders yet.</p>
-        ) : (
-          <ul>
-            {orders.map((o) => (
-              <li key={o.id} className="order-card">
-                <strong>Order #{o.id}</strong> - Status:{" "}
-                <span
-                  className={o.status === "Delivered" ? "delivered" : "pending"}
-                >
-                  {o.status}
-                </span>
-                <button onClick={() => cancelOrder(o.id)}>Cancel</button>
-                <ul>
-                  {o.items.map((item) => (
-                    <li key={item.product_id}>
-                      {item.name} x {item.quantity}
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
-        )}
+          <h2>📦 Orders</h2>
+          <input
+            placeholder="Search Order ID / Customer"
+            value={orderSearch}
+            onChange={(e) => setOrderSearch(e.target.value)}
+          />
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Status</th>
+                <th>Items</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredOrders.map((o) => (
+                <tr key={o.id}>
+                  <td>{o.id}</td>
+                  <td>{o.customer_name}</td>
+                  <td>{o.status}</td>
+                  <td>
+                    {o.items.map((item) => (
+                      <div key={item.product_id}>
+                        {item.name} x {item.quantity}
+                      </div>
+                    ))}
+                  </td>
+                  <td>
+                    <button onClick={() => cancelOrder(o.id)}>Cancel</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

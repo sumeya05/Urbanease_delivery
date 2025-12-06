@@ -1,206 +1,215 @@
-/* app.css */
-
-/* Global */
-body, html {
-  margin: 0;
+/* General App Container */
+.app-container {
+  font-family: 'Arial', sans-serif;
+  background: #f0f7ff;
+  color: #333;
   padding: 0;
-  font-family: Arial, sans-serif;
-  background: #f9f9f9;
+  margin: 0;
+}
+
+/* Main Layout */
+.main-layout {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+}
+
+/* Sidebar */
+.sidebar {
+  flex: 0 0 250px;
+  background: linear-gradient(135deg, #ffecd2, #fcb69f);
+  padding: 20px;
+  border-radius: 12px;
+  height: fit-content;
+}
+
+.sidebar h3 {
+  margin-top: 20px;
+  color: #fff;
+  text-shadow: 1px 1px 2px #000;
+}
+
+.sidebar button,
+.sidebar select,
+.sidebar input {
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.sidebar button {
+  background: #ff7e5f;
+  color: #fff;
+  transition: 0.3s;
+}
+
+.sidebar button:hover {
+  background: #feb47b;
+}
+
+.sidebar select {
+  background: #ffd194;
   color: #333;
 }
 
-.app-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 30px;
+.sidebar input {
+  background: #fff4e6;
+  color: #333;
 }
 
-/* Headings */
-h1 {
-  font-size: 2.5rem;
-  margin-bottom: 20px;
-  color: #0288d1;
-}
-
-h2 {
-  margin-top: 40px;
-  margin-bottom: 10px;
-  color: #555;
-}
-
-/* Search */
-.search-input {
-  padding: 10px 12px;
-  width: 100%;
-  max-width: 400px;
-  margin-bottom: 20px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-}
-
-/* Categories */
-.categories {
-  margin-bottom: 20px;
-}
-
-.category-btn {
-  margin: 0 5px 5px 0;
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  background: #ccc;
+/* Active category button */
+.sidebar .active {
+  background: #6a82fb;
   color: #fff;
-  font-weight: bold;
 }
 
-.category-btn.active {
-  background: #0288d1;
+/* Main Panel */
+.main-panel {
+  flex: 1;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
 }
 
-.category-btn.all-btn {
-  background: #555;
+/* Cart */
+.main-panel h2 {
+  color: #ff7e5f;
+  margin-bottom: 10px;
 }
 
-/* Price Filters */
-.price-filters {
+.main-panel ul {
+  list-style: none;
+  padding: 0;
+}
+
+.main-panel li {
+  background: #ffe0b2;
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.main-panel li button {
+  margin-left: 5px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: #ff6f61;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.main-panel li button:hover {
+  background: #ff9478;
+}
+
+/* Table */
+.main-panel table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.main-panel table th,
+.main-panel table td {
+  border: 1px solid #ffe0b2;
+  padding: 8px;
+  text-align: left;
+}
+
+.main-panel table th {
+  background: #ffcc80;
+  color: #333;
+}
+
+.main-panel table tr {
+  background: #fff8e1;
+}
+
+.main-panel table tr:nth-child(even) {
+  background: #fff3e0;
+}
+
+.main-panel table tr button {
+  background: #ff7e5f;
+  color: #fff;
+  border-radius: 6px;
+  padding: 5px 10px;
+  border: none;
+  cursor: pointer;
+}
+
+.main-panel table tr button:hover {
+  background: #feb47b;
+}
+
+/* Product Cards Grid */
+.products-section {
   margin-bottom: 20px;
 }
 
-.price-filters button {
-  margin-right: 10px;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  background: #4caf50;
-  color: white;
-  font-weight: bold;
-}
-
-/* Products */
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
 }
 
 .product-card {
-  padding: 15px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: white;
+  background: linear-gradient(135deg, #f6d365, #fda085);
+  border-radius: 12px;
+  padding: 10px;
   text-align: center;
+  box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
   transition: transform 0.2s;
 }
 
 .product-card:hover {
-  transform: translateY(-5px);
+  transform: scale(1.05);
 }
 
-.add-cart-btn {
+.product-card h3 {
+  font-size: 1rem;
+  color: #fff;
+}
+
+.product-card p {
+  font-weight: bold;
+  color: #fff;
+}
+
+.product-card button {
   margin-top: 10px;
-  padding: 8px 12px;
-  background: #ff9800;
+  background: #6a82fb;
+  color: #fff;
   border: none;
-  border-radius: 6px;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-/* Cart */
-.cart-section {
-  background: #ffffff;
-  padding: 20px;
-  border-radius: 12px;
-  margin-top: 30px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-}
-
-.cart-section ul {
-  list-style: none;
-  padding-left: 0;
-}
-
-.cart-section li {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.cart-section li button {
-  margin-left: 6px;
-  padding: 4px 8px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.cart-section li button:hover {
-  opacity: 0.8;
-}
-
-.cart-section input[type="text"] {
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  margin-right: 8px;
-  width: 150px;
-}
-
-/* Orders */
-.orders-section {
-  margin-top: 40px;
-}
-
-.order-card {
-  background: #fff;
-  padding: 15px;
   border-radius: 8px;
-  border: 1px solid #ddd;
-  margin-bottom: 12px;
-}
-
-.order-card ul {
-  list-style: none;
-  padding-left: 15px;
-}
-
-.order-card button {
-  margin-left: 10px;
-  padding: 4px 8px;
-  border: none;
-  border-radius: 4px;
-  background: #e53935;
-  color: white;
+  padding: 6px 12px;
   cursor: pointer;
 }
 
-.order-card button:hover {
-  opacity: 0.8;
+.product-card button:hover {
+  background: #fc5c7d;
 }
 
-.delivered {
-  color: green;
-  font-weight: bold;
-}
-
-.pending {
-  color: orange;
-  font-weight: bold;
+/* Inputs */
+input, select {
+  font-size: 0.9rem;
 }
 
 /* Responsive */
-@media (max-width: 768px) {
-  .products-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+@media (max-width: 1200px) {
+  .main-layout {
+    flex-direction: column;
   }
-
-  .cart-section input[type="text"] {
+  .sidebar {
     width: 100%;
-    margin-bottom: 10px;
   }
 }
-
