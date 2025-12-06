@@ -5,12 +5,6 @@ import { useCart } from "../hooks/useCart";
 const Cart = () => {
   const navigate = useNavigate();
   const { cart, removeFromCart, updateQuantity, getTotalPrice } = useCart();
- timport React from "react";
-import { useNavigate } from "react-router-dom";
-liv;
-const Cart = () => {
-  const navigate = useNavigate();
-  const { cart, removeFromCart, updateQuantity, getTotalPrice } = useCart();
 
   return (
     <div className="cart">
