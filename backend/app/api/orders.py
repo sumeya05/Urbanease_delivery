@@ -23,3 +23,8 @@ def read_order(order_id: int, db: Session = Depends(get_db)):
     if db_order is None:
         raise HTTPException(status_code=404, detail="Order not found")
     return db_order
+
+
+def read_orders_by_customer(customer_name: str, db: Session = Depends(get_db)):
+    orders = crud.get_orders_by_customer(db, customer_name=customer_name)
+    return orders
