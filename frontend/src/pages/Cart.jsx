@@ -2,6 +2,7 @@ import React from "react";
 import { useCart } from "../hooks/useCart";
 
 const Cart = () => {
+  const navigate = useNavigate();
   const { cart, removeFromCart, updateQuantity, getTotalPrice } = useCart();
 
   return (
@@ -33,7 +34,9 @@ const Cart = () => {
             ))}
           </ul>
           <p>Total: ${getTotalPrice()}</p>
-          <button>Proceed to Checkout</button>
+          <button onClick={() => navigate("/checkout")}>
+            Proceed to Checkout
+          </button>
         </div>
       )}
     </div>

@@ -9,6 +9,7 @@ alembic = "*"
 fastapi = "*"
 uvicorn = "*"
 pydantic = "*"
+pydantic-settings = "*"
 
 [dev-packages]
 
