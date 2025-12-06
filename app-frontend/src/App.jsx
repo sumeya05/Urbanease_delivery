@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "./app.css";
 
 const API_BASE = "http://localhost:8000/api";
 
@@ -8,8 +9,10 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [cart, setCart] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [discountCode, setDiscountCode] = useState("");
+  const [discountApplied, setDiscountApplied] = useState(false);
 
-  // --- Fetch categories ---
   useEffect(() => {
     fetch(`${API_BASE}/categories`)
       .then((res) => res.json())
@@ -17,18 +20,17 @@ export default function App() {
       .catch(console.error);
   }, []);
 
-  // --- Fetch products ---
   useEffect(() => {
-    const url = selectedCategory
+    let url = selectedCategory
       ? `${API_BASE}/products?category=${selectedCategory}`
       : `${API_BASE}/products`;
+    if (searchTerm) url += `&search=${searchTerm}`;
     fetch(url)
       .then((res) => res.json())
       .then(setProducts)
       .catch(console.error);
-  }, [selectedCategory]);
+  }, [selectedCategory, searchTerm]);
 
-  // --- Fetch orders and poll for updates ---
   const fetchOrders = () => {
     fetch(`${API_BASE}/orders`)
       .then((res) => res.json())
@@ -38,26 +40,40 @@ export default function App() {
 
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(fetchOrders, 5000); // Poll every 5 seconds
+    const interval = setInterval(fetchOrders, 5000);
     return () => clearInterval(interval);
   }, []);
 
   // --- Cart handlers ---
   const addToCart = (product) => {
-    setCart((prev) => [...prev, product]);
+    const existing = cart.find((p) => p.id === product.id);
+    if (existing) {
+      setCart(
+        cart.map((p) =>
+          p.id === product.id ? { ...p, quantity: p.quantity + 1 } : p
+        )
+      );
+    } else {
+      setCart([...cart, { ...product, quantity: 1 }]);
+    }
   };
 
-  const removeFromCart = (index) => {
-    setCart((prev) => prev.filter((_, i) => i !== index));
+  const removeFromCart = (id) => setCart(cart.filter((p) => p.id !== id));
+  const clearCart = () => setCart([]);
+  const changeQuantity = (id, delta) => {
+    setCart(
+      cart.map((p) =>
+        p.id === id ? { ...p, quantity: Math.max(1, p.quantity + delta) } : p
+      )
+    );
   };
 
-  // --- Order placement ---
+  // --- Orders ---
   const placeOrder = () => {
     if (cart.length === 0) return alert("Cart is empty!");
     const orderData = {
-      items: cart.map((p) => ({ product_id: p.id, quantity: 1 })),
+      items: cart.map((p) => ({ product_id: p.id, quantity: p.quantity })),
     };
-
     fetch(`${API_BASE}/orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -65,82 +81,101 @@ export default function App() {
     })
       .then((res) => res.json())
       .then((order) => {
-        setOrders((prev) => [...prev, order]);
+        setOrders([...orders, order]);
         setCart([]);
+        setDiscountApplied(false);
         alert("Order placed!");
       })
       .catch(console.error);
   };
 
+  const cancelOrder = (id) => {
+    fetch(`${API_BASE}/orders/${id}`, { method: "DELETE" })
+      .then(() => setOrders(orders.filter((o) => o.id !== id)))
+      .catch(console.error);
+  };
+
+  // --- Discounts ---
+  const applyDiscount = () => {
+    if (discountCode === "SAVE10") {
+      setDiscountApplied(true);
+      alert("10% discount applied!");
+    } else {
+      alert("Invalid code");
+      setDiscountApplied(false);
+    }
+  };
+
+  const cartTotal = cart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+  const discountedTotal = discountApplied
+    ? (cartTotal * 0.9).toFixed(2)
+    : cartTotal.toFixed(2);
+
   return (
-    <div style={{ fontFamily: "Arial, sans-serif", padding: "30px" }}>
+    <div className="app-container">
       <h1>📦 UrbanEase Delivery</h1>
 
+      {/* Search */}
+      <input
+        type="text"
+        placeholder="Search products..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="search-input"
+      />
+
       {/* Categories */}
-      <div style={{ marginBottom: "20px" }}>
-        <strong>Categories: </strong>
+      <div className="categories">
         {categories.map((c) => (
           <button
             key={c.id}
             onClick={() => setSelectedCategory(c.id)}
-            style={{
-              margin: "0 5px",
-              padding: "8px 12px",
-              background: selectedCategory === c.id ? "#0288d1" : "#ccc",
-              color: "#fff",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
+            className={
+              selectedCategory === c.id ? "category-btn active" : "category-btn"
+            }
           >
             {c.name}
           </button>
         ))}
         <button
           onClick={() => setSelectedCategory(null)}
-          style={{
-            margin: "0 5px",
-            padding: "8px 12px",
-            background: "#555",
-            color: "#fff",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
+          className="category-btn all-btn"
         >
           All
         </button>
       </div>
 
+      {/* Price Filter */}
+      <div className="price-filters">
+        <button
+          onClick={() => setProducts(products.filter((p) => p.price < 5))}
+        >
+          Under $5
+        </button>
+        <button
+          onClick={() =>
+            setProducts(products.filter((p) => p.price >= 5 && p.price <= 20))
+          }
+        >
+          $5–$20
+        </button>
+        <button
+          onClick={() => setProducts(products.filter((p) => p.price > 20))}
+        >
+          Above $20
+        </button>
+      </div>
+
       {/* Products */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))",
-          gap: "20px",
-        }}
-      >
+      <div className="products-grid">
         {products.map((p) => (
-          <div
-            key={p.id}
-            style={{
-              padding: "15px",
-              border: "1px solid #ddd",
-              borderRadius: "6px",
-            }}
-          >
+          <div key={p.id} className="product-card">
             <h3>{p.name}</h3>
             <p>Price: ${p.price}</p>
-            <button
-              onClick={() => addToCart(p)}
-              style={{
-                padding: "8px 12px",
-                background: "#4caf50",
-                color: "#fff",
-                border: "none",
-                borderRadius: "4px",
-              }}
-            >
+            <button onClick={() => addToCart(p)} className="add-cart-btn">
               Add to Cart
             </button>
           </div>
@@ -148,74 +183,54 @@ export default function App() {
       </div>
 
       {/* Cart */}
-      <div style={{ marginTop: "40px" }}>
+      <div className="cart-section">
         <h2>🛒 Cart ({cart.length})</h2>
         {cart.length === 0 ? (
           <p>No items in cart.</p>
         ) : (
           <>
             <ul>
-              {cart.map((item, i) => (
-                <li key={i} style={{ marginBottom: "8px" }}>
-                  {item.name} - ${item.price}{" "}
-                  <button
-                    onClick={() => removeFromCart(i)}
-                    style={{
-                      padding: "2px 6px",
-                      marginLeft: "8px",
-                      cursor: "pointer",
-                    }}
-                  >
+              {cart.map((item) => (
+                <li key={item.id}>
+                  {item.name} - ${item.price} x {item.quantity}
+                  <button onClick={() => changeQuantity(item.id, 1)}>+</button>
+                  <button onClick={() => changeQuantity(item.id, -1)}>-</button>
+                  <button onClick={() => removeFromCart(item.id)}>
                     Remove
                   </button>
                 </li>
               ))}
             </ul>
-            <button
-              onClick={placeOrder}
-              style={{
-                marginTop: "10px",
-                padding: "10px 16px",
-                background: "#ff9800",
-                color: "#fff",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}
-            >
-              Place Order
-            </button>
+            <p>Total: ${discountedTotal}</p>
+            <input
+              type="text"
+              placeholder="Discount code"
+              value={discountCode}
+              onChange={(e) => setDiscountCode(e.target.value)}
+            />
+            <button onClick={applyDiscount}>Apply Discount</button>
+            <button onClick={clearCart}>Clear Cart</button>
+            <button onClick={placeOrder}>Place Order</button>
           </>
         )}
       </div>
 
-      {/* Orders with real-time status */}
-      <div style={{ marginTop: "40px" }}>
+      {/* Orders */}
+      <div className="orders-section">
         <h2>📦 Orders ({orders.length})</h2>
         {orders.length === 0 ? (
           <p>No orders yet.</p>
         ) : (
           <ul>
             {orders.map((o) => (
-              <li
-                key={o.id}
-                style={{
-                  marginBottom: "12px",
-                  padding: "10px",
-                  border: "1px solid #ddd",
-                  borderRadius: "6px",
-                }}
-              >
+              <li key={o.id} className="order-card">
                 <strong>Order #{o.id}</strong> - Status:{" "}
                 <span
-                  style={{
-                    color: o.status === "Delivered" ? "green" : "orange",
-                  }}
+                  className={o.status === "Delivered" ? "delivered" : "pending"}
                 >
                   {o.status}
                 </span>
-                <br />
-                Items:
+                <button onClick={() => cancelOrder(o.id)}>Cancel</button>
                 <ul>
                   {o.items.map((item) => (
                     <li key={item.product_id}>
