@@ -1,6 +1,6 @@
 import React from "react";
-import { useCart } from "../hooks/useCart";
-
+import { useNavigate } from "react-router-dom";
+liv;
 const Cart = () => {
   const navigate = useNavigate();
   const { cart, removeFromCart, updateQuantity, getTotalPrice } = useCart();
