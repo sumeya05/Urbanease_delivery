@@ -1,8 +1,5 @@
-# TODO: Rectify Pydantic BaseSettings Import Error
+# TODO: Fix Console Errors
 
-## Steps to Complete:
-
-- [ ] Update import in backend/app/config.py: Change `from pydantic import BaseSettings` to `from pydantic_settings import BaseSettings`
-- [ ] Add `pydantic-settings` to backend/requirements.txt
-- [ ] Install updated dependencies: Run `pip install -r requirements.txt` in backend directory
-- [ ] Test the server: Run `cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload` to verify the error is resolved
+- [ ] Create manifest.json file in frontend/public/ to resolve syntax error
+- [ ] Update App.jsx to add React Router future flags (v7_startTransition and v7_relativeSplatPath)
+- [ ] Start the backend server using uvicorn to resolve API connection refused errors
