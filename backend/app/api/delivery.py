@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import List
 from ..deps import get_db
 from .. import crud, schemas
 
 router = APIRouter()
 
 
-@router.get("/", response_model=list[schemas.Delivery])
+@router.get("/", response_model=List[schemas.Delivery])
 def read_deliveries(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     deliveries = crud.get_deliveries(db, skip=skip, limit=limit)
     return deliveries

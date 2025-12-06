@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import List
 from ..deps import get_db
 from .. import crud, schemas
 
 router = APIRouter()
 
 
-@router.get("/", response_model=list[schemas.Order])
+@router.get("/", response_model=List[schemas.Order])
 def read_orders(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     orders = crud.get_orders(db, skip=skip, limit=limit)
     return orders
@@ -25,7 +26,7 @@ def read_order(order_id: int, db: Session = Depends(get_db)):
     return db_order
 
 
-@router.get("/customer/{customer_name}", response_model=list[schemas.Order])
+@router.get("/customer/{customer_name}", response_model=List[schemas.Order])
 def read_orders_by_customer(customer_name: str, db: Session = Depends(get_db)):
     orders = crud.get_orders_by_customer(db, customer_name=customer_name)
     return orders
