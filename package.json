@@ -26,3 +26,5 @@
     "vite": "^7.2.4"
   }
 }
+
+# The file has been updated to include the creation of a SQLAlchemy engine in models.py,
