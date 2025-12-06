@@ -1,0 +1,6 @@
+sqlalchemy
+alembic
+fastapi
+uvicorn
+pydantic
+pydantic-settings
