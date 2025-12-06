@@ -105,6 +105,11 @@ def get_db():
         db.close()
 
 
+@app.get("/")
+def root():
+    return {"message": "Welcome to UrbanEase Delivery API"}
+
+
 # Category endpoints
 @app.get("/categories/", response_model=List[CategoryResponse])
 def read_categories(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
