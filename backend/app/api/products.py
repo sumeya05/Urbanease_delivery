@@ -6,7 +6,7 @@ from .. import crud, schemas
 router = APIRouter()
 
 
-@router.get("/", response_model=list[schemas.Product])
+@router.get("/", response_model=List[schemas.Product])
 def read_products(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     products = crud.get_products(db, skip=skip, limit=limit)
     return products
