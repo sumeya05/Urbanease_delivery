@@ -25,6 +25,7 @@ def read_order(order_id: int, db: Session = Depends(get_db)):
     return db_order
 
 
+@router.get("/customer/{customer_name}", response_model=list[schemas.Order])
 def read_orders_by_customer(customer_name: str, db: Session = Depends(get_db)):
     orders = crud.get_orders_by_customer(db, customer_name=customer_name)
     return orders

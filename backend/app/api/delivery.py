@@ -43,3 +43,17 @@ def update_delivery(
     if db_delivery is None:
         raise HTTPException(status_code=404, detail="Delivery not found")
     return db_delivery
+
+
+@router.put("/order/{order_id}", response_model=schemas.Delivery)
+def update_delivery_by_order(
+    order_id: int, delivery: schemas.DeliveryCreate, db: Session = Depends(get_db)
+):
+    db_delivery = crud.get_delivery_by_order(db, order_id=order_id)
+    if db_delivery is None:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+    for key, value in delivery.dict().items():
+        setattr(db_delivery, key, value)
+    db.commit()
+    db.refresh(db_delivery)
+    return db_delivery
