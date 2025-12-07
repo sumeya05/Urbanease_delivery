@@ -1,338 +1,454 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-function App() {
+function DeliveryApp() {
   // --- STATE: DATA ---
   const [drivers, setDrivers] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [feedbacks, setFeedbacks] = useState([]);
+  const [cart, setCart] = useState([]);
 
   // --- STATE: FORMS ---
   const [driverName, setDriverName] = useState("");
   const [driverPhone, setDriverPhone] = useState("");
+  const [driverCarNumber, setDriverCarNumber] = useState("");
 
-  const [item, setItem] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [orderDate, setOrderDate] = useState("");
-  const [selectedDriver, setSelectedDriver] = useState(drivers[0]?.id || "");
-
-  const [feedbackOrderId, setFeedbackOrderId] = useState(orders[0]?.id || "");
-  const [feedbackContent, setFeedbackContent] = useState("");
-
-  // --- INITIAL LOAD ---
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  // Load customers from localStorage on mount
   useEffect(() => {
-    fetchData();
+    const savedCustomers = localStorage.getItem("customers");
+    if (savedCustomers) {
+      setCustomers(JSON.parse(savedCustomers));
+    }
   }, []);
 
-  const fetchData = () => {
-    axios
-      .get("http://127.0.0.1:8000/orders")
-      .then((res) => setOrders(res.data));
+  // Save customers to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("customers", JSON.stringify(customers));
+  }, [customers]);
+
+  const [productName, setProductName] = useState("");
+  const [productPrice, setProductPrice] = useState("");
+  const [quantity, setQuantity] = useState(1);
+
+  // --- FETCH INITIAL DATA ---
+  useEffect(() => {
+    fetchDrivers();
+    fetchCustomers();
+    fetchProducts();
+    fetchOrders();
+  }, []);
+
+  const fetchDrivers = () => {
     axios
       .get("http://127.0.0.1:8000/drivers")
-      .then((res) => setDrivers(res.data));
+      .then((res) => setDrivers(res.data))
+      .catch((err) =>
+        console.error("Error fetching drivers:", err.response || err)
+      );
+  };
+
+  const fetchCustomers = () => {
     axios
-      .get("http://127.0.0.1:8000/feedbacks")
-      .then((res) => setFeedbacks(res.data));
+      .get("http://127.0.0.1:8000/customers")
+      .then((res) => setCustomers(res.data))
+      .catch((err) =>
+        console.error("Error fetching customers:", err.response || err)
+      );
+  };
+
+  const fetchProducts = () => {
+    axios
+      .get("http://127.0.0.1:8000/products")
+      .then((res) => setProducts(res.data))
+      .catch((err) =>
+        console.error("Error fetching products:", err.response || err)
+      );
   };
 
   // --- HANDLERS ---
   const handleAddDriver = (e) => {
     e.preventDefault();
+    const newDriver = {
+      name: driverName,
+      phone: driverPhone,
+      car_number: driverCarNumber,
+    };
     axios
-      .post("http://127.0.0.1:8000/drivers", {
-        id: 0,
-        name: driverName,
-        phone: driverPhone,
-      })
-      .then(() => {
+      .post("http://127.0.0.1:8000/drivers/", newDriver)
+      .then((res) => {
+        setDrivers([...drivers, res.data]);
         setDriverName("");
         setDriverPhone("");
-        fetchData();
+        setDriverCarNumber("");
       })
-      .catch((err) => console.error(err));
+      .catch((err) =>
+        console.error("Error adding driver:", err.response || err)
+      );
   };
 
-  const handleAddOrder = (e) => {
+  const handleAddCustomer = (e) => {
     e.preventDefault();
-    if (!selectedDriver) return alert("Select a driver!");
+    const newCustomer = {
+      name: customerName,
+      email: customerEmail,
+      phone: customerPhone,
+    };
     axios
-      .post("http://127.0.0.1:8000/orders", {
-        id: 0,
-        item,
-        quantity,
-        order_date: orderDate,
-        driver_id: selectedDriver,
+      .post("http://127.0.0.1:8000/customers/", newCustomer)
+      .then((res) => {
+        setCustomers([...customers, res.data]);
+        setCustomerName("");
+        setCustomerEmail("");
+        setCustomerPhone("");
       })
-      .then(() => {
-        setItem("");
-        setQuantity("");
-        setOrderDate("");
-        fetchData();
-      })
-      .catch((err) => console.error(err));
+      .catch((err) =>
+        console.error("Error adding customer:", err.response || err)
+      );
   };
 
-  const handleAddFeedback = (e) => {
+  const handleAddToCart = (e) => {
     e.preventDefault();
-    if (!feedbackOrderId) return alert("Select an order!");
+    if (!productName || quantity <= 0) return;
+    const existing = cart.find((p) => p.name === productName);
+    if (existing) {
+      setCart(
+        cart.map((p) =>
+          p.name === productName ? { ...p, qty: p.qty + Number(quantity) } : p
+        )
+      );
+    } else {
+      setCart([
+        ...cart,
+        {
+          name: productName,
+          qty: Number(quantity),
+          price: Number(productPrice),
+        },
+      ]);
+    }
+    setProductName("");
+    setProductPrice("");
+    setQuantity(1);
+  };
 
+  const handleRemoveFromCart = (name) => {
+    setCart(cart.filter((p) => p.name !== name));
+  };
+
+  const handlePlaceOrder = () => {
+    if (!customerName || cart.length === 0) {
+      alert("Enter customer name and add products");
+      return;
+    }
+    const customer = customers.find((c) => c.name === customerName);
+    if (!customer) {
+      alert("Customer not found. Please add the customer first.");
+      return;
+    }
+    const promises = cart.map((item) => {
+      const orderData = {
+        customer_id: customer.id,
+        item: item.name,
+        quantity: item.qty,
+      };
+      return axios
+        .post("http://127.0.0.1:8000/orders/", orderData)
+        .catch((err) =>
+          console.error("Error placing order:", err.response || err)
+        );
+    });
+    Promise.all(promises).then(() => {
+      fetchOrders();
+      setCart([]);
+      setCustomerName("");
+      setCustomerPhone("");
+      setCustomerEmail("");
+      alert("Order placed successfully!");
+    });
+  };
+
+  const fetchOrders = () => {
     axios
-      .post("http://127.0.0.1:8000/feedbacks", {
-        id: 0,
-        content: feedbackContent,
-        order_id: feedbackOrderId,
-      })
-      .then(() => {
-        setFeedbackContent("");
-        fetchData();
-      })
-      .catch((err) => console.error(err));
+      .get("http://127.0.0.1:8000/orders")
+      .then((res) => setOrders(res.data))
+      .catch((err) =>
+        console.error("Error fetching orders:", err.response || err)
+      );
   };
 
   // --- STYLES ---
   const inputStyle = {
-    padding: "10px",
+    padding: "12px",
     borderRadius: "6px",
-    border: "1px solid #ccc",
-    width: "100%",
+    border: "1px solid #6e3d3dff",
     fontSize: "14px",
   };
-
   const cardStyle = {
-    padding: "20px",
-    borderRadius: "10px",
-    background: "#f0f0f0",
-    color: "#333",
-  };
-
-  const sectionTitleStyle = {
-    marginTop: 0,
-    marginBottom: "15px",
-    fontWeight: "bold",
-  };
-
-  const buttonStyle = {
-    padding: "10px",
-    background: "#007bff",
-    color: "#fff",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
+    padding: "25px",
+    borderRadius: "12px",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
   };
 
   return (
     <div
       style={{
-        fontFamily: "Arial, sans-serif",
-        padding: "30px",
-        maxWidth: "1000px",
+        fontFamily: "Segoe UI",
+        padding: "40px",
+        maxWidth: "1200px",
         margin: "0 auto",
       }}
     >
-      <h1 style={{ fontSize: "2rem", marginBottom: "30px" }}>
-        🚚 Urbanease Delivery Dashboard
-      </h1>
-
-      {/* FORMS */}
+      <h1 style={{ fontSize: "2.5rem" }}>🚚 Delivery Dashboard</h1>
+      {/* ADD DRIVER & CUSTOMER */}
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
-          gap: "30px",
-          marginBottom: "30px",
+          gap: "40px",
+          marginBottom: "40px",
         }}
       >
-        {/* Add Driver */}
-        <div style={cardStyle}>
-          <h2 style={sectionTitleStyle}>Add Driver</h2>
+        {/* DRIVER FORM */}
+        <div style={{ ...cardStyle, background: "#aebec9ff" }}>
+          <h2>Add Driver</h2>
           <form
+            style={{ display: "flex", flexDirection: "column", gap: "15px" }}
             onSubmit={handleAddDriver}
-            style={{ display: "flex", flexDirection: "column", gap: "10px" }}
           >
             <input
-              type="text"
-              placeholder="Driver Name"
+              placeholder="Name"
               value={driverName}
               onChange={(e) => setDriverName(e.target.value)}
               style={inputStyle}
-              required
             />
             <input
-              type="text"
               placeholder="Phone"
               value={driverPhone}
               onChange={(e) => setDriverPhone(e.target.value)}
               style={inputStyle}
             />
-            <button type="submit" style={buttonStyle}>
-              Add Driver
+            <input
+              placeholder="Car Number"
+              value={driverCarNumber}
+              onChange={(e) => setDriverCarNumber(e.target.value)}
+              style={inputStyle}
+            />
+            <button
+              type="submit"
+              style={{
+                padding: "12px",
+                background: "#0288d1",
+                color: "#070505ff",
+                border: "none",
+                borderRadius: "6px",
+              }}
+            >
+              Create Driver
             </button>
           </form>
+
+          <h3>Drivers Added ({drivers.length > 0 ? 1 : 0})</h3>
+          {drivers.map((d, i) => (
+            <div
+              key={i}
+              style={{
+                background: "#8ca9c0ff",
+                padding: "10px",
+                marginBottom: "5px",
+                borderRadius: "6px",
+              }}
+            >
+              {d.name} - {d.phone} - {d.car_number}
+            </div>
+          ))}
         </div>
 
-        {/* Add Order */}
-        <div style={cardStyle}>
-          <h2 style={sectionTitleStyle}>Add Order</h2>
+        {/* CUSTOMER FORM */}
+        <div style={{ ...cardStyle, background: "#996868ff" }}>
+          <h2>Add Customer</h2>
           <form
-            onSubmit={handleAddOrder}
-            style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+            style={{ display: "flex", flexDirection: "column", gap: "15px" }}
+            onSubmit={handleAddCustomer}
           >
             <input
-              type="text"
-              placeholder="Item"
-              value={item}
-              onChange={(e) => setItem(e.target.value)}
-              style={inputStyle}
-              required
-            />
-            <input
-              type="text"
-              placeholder="Quantity"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
+              placeholder="Name"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
               style={inputStyle}
             />
             <input
-              type="text"
-              placeholder="Date"
-              value={orderDate}
-              onChange={(e) => setOrderDate(e.target.value)}
+              placeholder="Email"
+              value={customerEmail}
+              onChange={(e) => setCustomerEmail(e.target.value)}
               style={inputStyle}
             />
-            <select
-              value={selectedDriver}
-              onChange={(e) => setSelectedDriver(e.target.value)}
+            <input
+              placeholder="Phone"
+              value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value)}
               style={inputStyle}
+            />
+            <button
+              type="submit"
+              style={{
+                padding: "12px",
+                background: "#4caf50",
+                color: "#421c1cff",
+                border: "none",
+                borderRadius: "6px",
+              }}
             >
-              {drivers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-            <button type="submit" style={buttonStyle}>
-              Add Order
+              Create Customer
             </button>
           </form>
+
+          <h3>Customers Added ({customers.length})</h3>
+          {customers.map((c, i) => (
+            <div
+              key={i}
+              style={{
+                background: "#5676a7ff",
+                padding: "10px",
+                marginBottom: "5px",
+                borderRadius: "6px",
+              }}
+            >
+              <p style={{ margin: "5px 0", fontWeight: "bold" }}>
+                Name: {c.name}
+              </p>
+              <p style={{ margin: "5px 0" }}>Phone: {c.phone}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Add Feedback */}
-      <div style={{ ...cardStyle, marginBottom: "30px" }}>
-        <h2 style={sectionTitleStyle}>Add Feedback</h2>
+      {/* CART & PRODUCTS */}
+      <div
+        style={{ ...cardStyle, background: "#a19c94ff", marginBottom: "40px" }}
+      >
+        <h2>Add Product & Cart</h2>
         <form
-          onSubmit={handleAddFeedback}
           style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}
+          onSubmit={handleAddToCart}
         >
-          <select
-            value={feedbackOrderId}
-            onChange={(e) => setFeedbackOrderId(e.target.value)}
-            style={inputStyle}
-          >
-            {orders.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.item}
-              </option>
-            ))}
-          </select>
           <input
-            type="text"
-            placeholder="Feedback"
-            value={feedbackContent}
-            onChange={(e) => setFeedbackContent(e.target.value)}
+            placeholder="Product Name"
+            value={productName}
+            onChange={(e) => setProductName(e.target.value)}
             style={inputStyle}
-            required
           />
-          <button type="submit" style={buttonStyle}>
-            Submit
+          <input
+            placeholder="Price"
+            value={productPrice}
+            onChange={(e) => setProductPrice(e.target.value)}
+            style={inputStyle}
+          />
+          <input
+            type="number"
+            min="1"
+            placeholder="Quantity"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            style={{ ...inputStyle, width: "80px" }}
+          />
+          <button
+            type="submit"
+            style={{
+              padding: "12px 24px",
+              background: "#242221ff",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+            }}
+          >
+            Add to Cart
           </button>
         </form>
-      </div>
 
-      {/* DISPLAY LISTS */}
-      <div
-        style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "30px" }}
-      >
-        {/* Orders */}
-        <div>
-          <h2 style={{ borderBottom: "2px solid #ccc", paddingBottom: "5px" }}>
-            Orders ({orders.length})
-          </h2>
-          {orders.map((order) => {
-            const orderFeedbacks = feedbacks.filter(
-              (f) => f.order_id === order.id
-            );
-            return (
+        {cart.length > 0 && (
+          <div style={{ marginTop: "20px" }}>
+            <h4>Cart</h4>
+            {cart.map((item, i) => (
               <div
-                key={order.id}
+                key={i}
                 style={{
-                  background: "#fff",
-                  padding: "15px",
-                  marginBottom: "10px",
-                  borderRadius: "8px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "8px",
                 }}
               >
-                <h3 style={{ margin: "0 0 5px 0" }}>{order.item}</h3>
-                <p style={{ margin: "0 0 5px 0" }}>
-                  Quantity: {order.quantity}
-                </p>
-                <p
+                <span>
+                  {item.name} x{item.qty} (${item.price * item.qty})
+                </span>
+                <button
+                  onClick={() => handleRemoveFromCart(item.name)}
                   style={{
-                    margin: "0 0 5px 0",
-                    fontSize: "0.9rem",
-                    color: "#666",
+                    background: "#e53935",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "4px",
                   }}
                 >
-                  Driver:{" "}
-                  {drivers.find((d) => d.id === order.driver_id)?.name || "N/A"}
-                </p>
-                <p
-                  style={{
-                    margin: "0 0 5px 0",
-                    fontSize: "0.9rem",
-                    color: "#666",
-                  }}
-                >
-                  Date: {order.order_date}
-                </p>
-                <div>
-                  <strong>Feedback:</strong>
-                  {orderFeedbacks.length === 0 ? (
-                    <p style={{ margin: 0 }}>No feedback yet.</p>
-                  ) : (
-                    orderFeedbacks.map((f) => (
-                      <p key={f.id} style={{ margin: "0 0 3px 0" }}>
-                        - {f.content}
-                      </p>
-                    ))
-                  )}
-                </div>
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={handlePlaceOrder}
+              style={{
+                padding: "12px 24px",
+                background: "#1976d2",
+                color: "#fff",
+                border: "none",
+                borderRadius: "6px",
+                marginBottom: "40px",
+              }}
+            >
+              Place Order
+            </button>
+          </div>
+        )}
+      </div>
+      {/* ORDERS SUMMARY */}
+      <div
+        style={{
+          background: "#337033ff",
+          padding: "20px",
+          borderRadius: "12px",
+        }}
+      >
+        <h2>Orders Summary</h2>
+        {orders.length === 0 ? (
+          <p>No orders placed yet.</p>
+        ) : (
+          orders.map((order, i) => {
+            const customer = customers.find((c) => c.id === order.customer_id);
+            return (
+              <div
+                key={i}
+                style={{
+                  background: "#5c755dff",
+                  padding: "10px",
+                  marginBottom: "10px",
+                  borderRadius: "6px",
+                }}
+              >
+                <p>Customer: {customer ? customer.name : "Unknown"}</p>
+                <p>Item: {order.item}</p>
+                <p>Quantity: {order.quantity}</p>
+                <p>Status: {order.status}</p>
+                <p>Created At: {new Date(order.created_at).toLocaleString()}</p>
               </div>
             );
-          })}
-        </div>
-
-        {/* Drivers */}
-        <div
-          style={{
-            background: "#f9f9f9",
-            padding: "15px",
-            borderRadius: "10px",
-          }}
-        >
-          <h3 style={{ marginTop: 0 }}>Drivers</h3>
-          <ul>
-            {drivers.map((d) => (
-              <li key={d.id}>
-                {d.name} ({d.phone})
-              </li>
-            ))}
-          </ul>
-        </div>
+          })
+        )}
       </div>
     </div>
   );
 }
 
-export default App;
+export default DeliveryApp;

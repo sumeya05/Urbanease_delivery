@@ -1,0 +1,11 @@
+- [x] Add email state and input field for customers
+- [x] Modify handleAddDriver to POST to backend and update state
+- [x] Modify handleAddCustomer to POST to backend with email and update state
+- [x] Add error handling (.catch) to all Axios calls in fetchData
+- [x] Separate fetchData into individual fetch functions for better organization
+- [x] Define handlePlaceOrder to find customer by name, POST orders for each cart item, then fetch orders and clear cart
+- [x] Update orders summary display to match backend Order model (item, quantity, no items array)
+- [x] Change "Drivers Added" and "Customers Added" counters to show 0 or 1 based on whether any have been added
+- [x] Fix customer display in customer list to use correct variable
+- [x] Enhance orders summary to show status and created_at
+- [x] Add success alert after placing order

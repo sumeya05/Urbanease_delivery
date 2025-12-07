@@ -10,4 +10,3 @@ export default defineConfig({
   ],
   root: "app-frontend",
 });
-# all done !

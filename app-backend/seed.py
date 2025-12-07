@@ -1,31 +1,46 @@
+# server/seed_products.py
 from sqlalchemy.orm import sessionmaker
 from models import Category, Product, engine
 
+# 1. Connect to the database
 Session = sessionmaker(bind=engine)
 session = Session()
 
-# Seed categories
-categories = [
-    Category(id=1, name="Food"),
-    Category(id=2, name="Electronics"),
-    Category(id=3, name="Clothes"),
-    Category(id=4, name="Books"),
-    Category(id=5, name="Furniture"),
-]
 
-# Seed products
-products = [
-    Product(id=1, name="Burger", price=8.0, category_id=1),
-    Product(id=2, name="Pizza", price=12.0, category_id=1),
-    Product(id=3, name="Laptop", price=900.0, category_id=2),
-    Product(id=4, name="T-shirt", price=20.0, category_id=3),
-    Product(id=5, name="Novel", price=15.0, category_id=4),
-    Product(id=6, name="Sofa", price=300.0, category_id=5),
-]
+def seed_data():
+    print("🌱 Clearing old data...")
+    session.query(Product).delete()
+    session.query(Category).delete()
+    session.commit()
 
-session.add_all(categories)
-session.add_all(products)
-session.commit()
-session.close()
+    print("🌱 Creating Categories...")
+    categories = [
+        Category(name="Food"),
+        Category(name="Electronics"),
+        Category(name="Clothes"),
+        Category(name="Books"),
+        Category(name="Furniture"),
+    ]
+    session.add_all(categories)
+    session.commit()  # commit to generate IDs
+    print(f"✅ Added {len(categories)} categories.")
 
-print("Database seeded successfully.")
+    print("🌱 Creating Products...")
+    products = [
+        Product(name="Burger", price=8.0, category_id=categories[0].id),
+        Product(name="Pizza", price=12.0, category_id=categories[0].id),
+        Product(name="Laptop", price=900.0, category_id=categories[1].id),
+        Product(name="T-shirt", price=20.0, category_id=categories[2].id),
+        Product(name="Novel", price=15.0, category_id=categories[3].id),
+        Product(name="Sofa", price=300.0, category_id=categories[4].id),
+    ]
+    session.add_all(products)
+    session.commit()
+    print(f"✅ Added {len(products)} products.")
+
+    print("🎉 Database populated successfully!")
+
+
+if __name__ == "__main__":
+    seed_data()
+    session.close()

@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import sessionmaker, Session
-from models import Category, Product, Customer, Order, OrderItem, engine
+from models import Category, Product, Customer, Order, OrderItem, Driver, engine
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
@@ -59,6 +60,10 @@ class CustomerResponse(CustomerBase):
 
 class OrderBase(BaseModel):
     customer_id: int
+    item: Optional[str] = None
+    quantity: Optional[int] = None
+    order_date: Optional[datetime] = None
+    driver_id: Optional[int] = None
     status: Optional[str] = "Pending"
 
 
@@ -92,7 +97,33 @@ class OrderItemResponse(OrderItemBase):
         from_attributes = True
 
 
+class DriverBase(BaseModel):
+    name: str
+    phone: str
+    car_number: Optional[str] = None
+
+
+class DriverCreate(DriverBase):
+    pass
+
+
+class DriverResponse(DriverBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # Allow requests from React dev server
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -307,3 +338,85 @@ def delete_order_item(order_item_id: int, db: Session = Depends(get_db)):
     db.delete(db_order_item)
     db.commit()
     return {"message": "OrderItem deleted"}
+
+
+# Driver endpoints
+@app.get("/drivers/", response_model=List[DriverResponse])
+def read_drivers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    drivers = db.query(Driver).offset(skip).limit(limit).all()
+    return drivers
+
+
+@app.post("/drivers/", response_model=DriverResponse)
+def create_driver(driver: DriverCreate, db: Session = Depends(get_db)):
+    db_driver = Driver(**driver.dict())
+    db.add(db_driver)
+    db.commit()
+    db.refresh(db_driver)
+    return db_driver
+
+
+@app.put("/drivers/{driver_id}", response_model=DriverResponse)
+def update_driver(driver_id: int, driver: DriverCreate, db: Session = Depends(get_db)):
+    db_driver = db.query(Driver).filter(Driver.id == driver_id).first()
+    if not db_driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    for key, value in driver.dict().items():
+        setattr(db_driver, key, value)
+    db.commit()
+    db.refresh(db_driver)
+    return db_driver
+
+
+@app.delete("/drivers/{driver_id}")
+def delete_driver(driver_id: int, db: Session = Depends(get_db)):
+    db_driver = db.query(Driver).filter(Driver.id == driver_id).first()
+    if not db_driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    db.delete(db_driver)
+    db.commit()
+    return {"message": "Driver deleted"}
+
+
+# Delivery endpoints for tracker and status updates
+@app.get("/delivery/{order_id}")
+def get_delivery_status(order_id: int, db: Session = Depends(get_db)):
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return {
+        "id": order.id,
+        "item": order.item,
+        "quantity": order.quantity,
+        "order_date": order.order_date,
+        "driver": order.driver.name if order.driver else None,
+        "status": order.status,
+        "customer": order.customer.name if order.customer else None,
+    }
+
+
+@app.put("/delivery/{order_id}/status")
+def update_delivery_status(order_id: int, status: str, db: Session = Depends(get_db)):
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    order.status = status
+    order.updated_at = datetime.utcnow()
+    db.commit()
+    return {"message": "Status updated"}
+
+
+@app.put("/orders/{order_id}/assign")
+def assign_driver_to_order(
+    order_id: int, driver_id: int, db: Session = Depends(get_db)
+):
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    driver = db.query(Driver).filter(Driver.id == driver_id).first()
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    order.driver_id = driver_id
+    order.updated_at = datetime.utcnow()
+    db.commit()
+    return {"message": "Driver assigned"}
